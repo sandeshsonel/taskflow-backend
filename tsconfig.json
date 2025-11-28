@@ -2,13 +2,13 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "rootDir": "./src",
+    "rootDir": "api",
     "outDir": "./build",
     "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./src",
+    "baseUrl": "api",
     "paths": {
       "@config/*": ["config/*"],
       "@/constants/*": ["constants/*"],
@@ -23,6 +23,6 @@
       "@validations/*": ["validations/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["api/**/*"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
