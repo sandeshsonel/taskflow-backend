@@ -6,12 +6,13 @@ import account from './account-route';
 import adminUser from './admin-user-route';
 import notification from './notification-route';
 import tasks from './tasks-route';
+import bugRoute from './bug-route';
 
 import { errorHandler } from '@middleware/errorHandler-middleware';
 
 const router = Router();
 
-const apiRoutes = [account, adminUser, notification, tasks];
+const apiRoutes = [account, adminUser, notification, tasks, bugRoute];
 
 const register = (app: Express): void => {
   app.use(router);

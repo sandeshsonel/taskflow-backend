@@ -5,6 +5,7 @@ import compression from 'compression';
 import methodOverride from 'method-override';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
+import path from 'path';
 
 import routes from './routes';
 import { port, database } from './config';
@@ -26,6 +27,10 @@ function initializeApp(app: Express) {
       }),
     );
 
+    app.use(
+      '/bug-attachments',
+      express.static(path.join(__dirname, '..', 'public', 'bug-attachments')),
+    );
     app.use('/public', express.static(`${__dirname}/../public`));
 
     app.use((_, res: Response, next: NextFunction) => {
