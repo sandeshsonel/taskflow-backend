@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import AdminUserModel from '@models/admin-user-model';
 import UserModel from '@models/user-model';
 import NotificationModel from '@models/notification-model';
+import TaskModel from '@models/tasks-model';
+
+import { getLastNDays, percentChange } from '@utils/index';
 
 export default {
   async getUsersList(req: Request, res: Response, next: NextFunction) {
@@ -166,6 +169,126 @@ export default {
     } catch (error) {
       return res.status(400).json({ success: false, message: 'User delete failed' });
       next(error);
+    }
+  },
+  async getDashboardStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const adminId = req.user?.id;
+      const last7Days = getLastNDays(7);
+      const prev14Days = getLastNDays(14);
+
+      // ---------------------------------------------------------
+      // 1. FETCH ADMIN DOCUMENT
+      // ---------------------------------------------------------
+      const admin = await AdminUserModel.findOne({ adminId });
+
+      if (!admin) {
+        return res.status(404).json({ success: false, message: 'Admin not found' });
+      }
+
+      const users = admin.users;
+
+      // Extract all normal user IDs (assignTo matches these)
+      const normalUserIds = users.map((u: any) => u.userId);
+
+      // ---------------------------------------------------------
+      // USERS (Dynamic week-over-week)
+      // ---------------------------------------------------------
+      const totalUsers = users.length;
+
+      const currentNewSignups = users.filter(
+        (u: any) => u.joinedAt && u.joinedAt >= last7Days,
+      ).length;
+
+      const previousNewSignups = users.filter(
+        (u: any) => u.joinedAt && u.joinedAt >= prev14Days && u.joinedAt < last7Days,
+      ).length;
+
+      const usersLastWeek = users.filter((u: any) => u.joinedAt && u.joinedAt < last7Days).length;
+
+      // ---------------------------------------------------------
+      // TASKS FOR THIS ADMIN'S USERS
+      // Because assignTo = normal user's id (string/ObjectId)
+      // ---------------------------------------------------------
+
+      // ACTIVE TASKS NOW
+      const activeTasksNow = await TaskModel.aggregate([
+        { $unwind: '$tasks' },
+        {
+          $match: {
+            'tasks.assignTo': { $in: normalUserIds },
+            'tasks.status': { $in: ['pending', 'in-progress'] },
+          },
+        },
+        { $count: 'total' },
+      ]);
+
+      const activeTasksCount = activeTasksNow[0]?.total || 0;
+
+      // ACTIVE TASKS LAST WEEK
+      const activeTasksPrev = await TaskModel.aggregate([
+        { $unwind: '$tasks' },
+        {
+          $match: {
+            'tasks.assignTo': { $in: normalUserIds },
+            'tasks.status': { $in: ['pending', 'in-progress'] },
+            'tasks.updatedAt': { $lt: last7Days },
+          },
+        },
+        { $count: 'total' },
+      ]);
+
+      const activeTasksPrevCount = activeTasksPrev[0]?.total || 0;
+
+      // COMPLETED THIS WEEK
+      const completedThisWeekAgg = await TaskModel.aggregate([
+        { $unwind: '$tasks' },
+        {
+          $match: {
+            'tasks.assignTo': { $in: normalUserIds },
+            'tasks.status': 'completed',
+            'tasks.updatedAt': { $gte: last7Days },
+          },
+        },
+        { $count: 'total' },
+      ]);
+
+      const completedThisWeekCount = completedThisWeekAgg[0]?.total || 0;
+
+      // COMPLETED LAST WEEK
+      const completedLastWeekAgg = await TaskModel.aggregate([
+        { $unwind: '$tasks' },
+        {
+          $match: {
+            'tasks.assignTo': { $in: normalUserIds },
+            'tasks.status': 'completed',
+            'tasks.updatedAt': { $gte: prev14Days, $lt: last7Days },
+          },
+        },
+        { $count: 'total' },
+      ]);
+
+      const completedLastWeekCount = completedLastWeekAgg[0]?.total || 0;
+      // ---------------------------------------------------------
+      // FINAL RESULT (NO STATIC VALUES)
+      // ---------------------------------------------------------
+      const data = {
+        totalUsers,
+        totalUsersChange: percentChange(totalUsers, usersLastWeek),
+
+        activeTasks: activeTasksCount,
+        activeTasksChange: percentChange(activeTasksCount, activeTasksPrevCount),
+
+        completedThisWeek: completedThisWeekCount,
+        completedThisWeekChange: percentChange(completedThisWeekCount, completedLastWeekCount),
+
+        newSignups: currentNewSignups,
+        newSignupsChange: percentChange(currentNewSignups, previousNewSignups),
+      };
+      return res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+      return res.status(400).json({ success: false, message: 'User delete failed' });
     }
   },
 };

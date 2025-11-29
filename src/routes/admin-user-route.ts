@@ -15,6 +15,8 @@ router
   .patch(authMiddleware, adminUserContoller.updateUser)
   .delete(authMiddleware, adminUserContoller.deleteUser);
 
+router.route('/admin/stats').get(authMiddleware, adminUserContoller.getDashboardStats);
+
 // ===================== ROUTES ===================== //
 
 export default router;

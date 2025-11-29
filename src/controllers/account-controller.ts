@@ -143,6 +143,21 @@ export default {
         return res.status(400).json({ message: 'Invalid credentials' });
       }
 
+      const admin = await AdminUserModel.findOne(
+        { 'users.email': email },
+        { users: { $elemMatch: { email } }, _id: 0 },
+      ).lean();
+
+      const adminWithUsers = admin as { users?: any[] } | null;
+      const userObject = adminWithUsers?.users?.[0];
+
+      if (userObject?.status === 'suspended') {
+        return res.status(400).json({
+          success: false,
+          message: 'Your account is suspended. Please contact the administrator for assistance.',
+        });
+      }
+
       // ✅ Compare password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return res.status(400).json({ message: 'Incorrect password' });
@@ -215,7 +230,23 @@ export default {
 
   async getUserDetail(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.user as { id: string };
+      const { id, email } = req.user as { id: string; email: string };
+
+      const admin = await AdminUserModel.findOne(
+        { 'users.email': email },
+        { users: { $elemMatch: { email } }, _id: 0 },
+      ).lean();
+
+      const adminWithUsers = admin as { users?: any[] } | null;
+      const userObject = adminWithUsers?.users?.[0];
+
+      if (userObject?.status === 'suspended') {
+        return res.status(401).json({
+          success: false,
+          data: { status: 'suspended' },
+          message: 'Your account is suspended. Please contact the administrator for assistance.',
+        });
+      }
       const userInfo = await UserSchema.findById(id).select(['-password', '-__v']);
 
       return res.status(200).json({
