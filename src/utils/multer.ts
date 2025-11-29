@@ -1,10 +1,15 @@
 import multer, { FileFilterCallback } from 'multer';
 import { Request } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { generateId } from '.';
 
 // Make sure uploadsDir is defined somewhere
 const uploadsDir = path.join(__dirname, '../../public/bug-attachments');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: (
