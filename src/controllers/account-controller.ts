@@ -139,10 +139,6 @@ export default {
       // ✅ Check if user exists
       const user = await UserSchema.findOne({ email });
 
-      if (!user || !user.password) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-
       const admin = await AdminUserModel.findOne(
         { 'users.email': email },
         { users: { $elemMatch: { email } }, _id: 0 },
@@ -151,6 +147,10 @@ export default {
       const adminWithUsers = admin as { users?: any[] } | null;
       const userObject = adminWithUsers?.users?.[0];
 
+      if ((!user || !user.password) && (!userObject || !userObject?.password)) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+      }
+
       if (userObject?.status === 'suspended') {
         return res.status(400).json({
           success: false,
@@ -158,17 +158,19 @@ export default {
         });
       }
 
+      const currentUser = user || userObject;
+
       // ✅ Compare password
-      const isMatch = await bcrypt.compare(password, user.password);
+      const isMatch = await bcrypt.compare(password, currentUser.password);
       if (!isMatch) return res.status(400).json({ message: 'Incorrect password' });
 
       // ✅ Generate Token
       const token = jwt.sign(
         {
-          id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
+          id: currentUser._id,
+          fullName: currentUser.fullName,
+          email: currentUser.email,
+          role: currentUser.role,
         },
         tokenInfo.jwtSecret,
         { expiresIn: '7d' },
@@ -178,11 +180,11 @@ export default {
         message: 'Signin successful',
         token,
         user: {
-          id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
-          status: user.status,
+          id: currentUser._id,
+          fullName: currentUser.fullName,
+          email: currentUser.email,
+          role: currentUser.role,
+          status: currentUser.status,
         },
       });
     } catch (error) {
@@ -235,7 +237,9 @@ export default {
       const admin = await AdminUserModel.findOne(
         { 'users.email': email },
         { users: { $elemMatch: { email } }, _id: 0 },
-      ).lean();
+      )
+        .select(['-password'])
+        .lean();
 
       const adminWithUsers = admin as { users?: any[] } | null;
       const userObject = adminWithUsers?.users?.[0];
@@ -247,11 +251,11 @@ export default {
           message: 'Your account is suspended. Please contact the administrator for assistance.',
         });
       }
-      const userInfo = await UserSchema.findById(id).select(['-password', '-__v']);
+      const userInfo = await UserSchema.findById(id).select(['-password']);
 
       return res.status(200).json({
         success: true,
-        data: userInfo,
+        data: userInfo ?? userObject,
         message: 'User details fetched successfully',
       });
     } catch (error) {
