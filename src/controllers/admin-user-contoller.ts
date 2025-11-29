@@ -183,7 +183,7 @@ export default {
       const admin = await AdminUserModel.findOne({ adminId });
 
       if (!admin) {
-        return res.status(404).json({ success: false, message: 'Admin not found' });
+        return res.status(200).json({ success: true, data: {} });
       }
 
       const users = admin.users;
@@ -272,7 +272,7 @@ export default {
       // ---------------------------------------------------------
       // FINAL RESULT (NO STATIC VALUES)
       // ---------------------------------------------------------
-      const data = {
+      const dashboardStats = {
         totalUsers,
         totalUsersChange: percentChange(totalUsers, usersLastWeek),
 
@@ -285,7 +285,7 @@ export default {
         newSignups: currentNewSignups,
         newSignupsChange: percentChange(currentNewSignups, previousNewSignups),
       };
-      return res.status(200).json({ success: true, data });
+      return res.status(200).json({ success: true, data: dashboardStats });
     } catch (error) {
       next(error);
       return res.status(400).json({ success: false, message: 'User delete failed' });
