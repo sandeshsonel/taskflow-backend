@@ -10,13 +10,14 @@ import path from 'path';
 import routes from './routes';
 import { port, database } from './config';
 import logger from '@utils/logger';
+import { corsOptions } from '@utils/corsOptions';
 
 function initializeApp(app: Express) {
   /**
    * Load all middleware
    */
   function middleware() {
-    app.use(cors());
+    app.use(cors(corsOptions));
     app.use(bodyParser.urlencoded({ extended: false }));
     app.use(bodyParser.json({ limit: '2000mb' }));
     app.use(compression());

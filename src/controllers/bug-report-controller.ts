@@ -41,7 +41,6 @@ export default {
         attachments: processedFiles,
       });
 
-      console.log({ processedFiles, newBugReport });
       return res.status(201).json({
         success: true,
         message: 'Bug report submitted successfully!',
