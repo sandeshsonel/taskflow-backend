@@ -10,7 +10,7 @@ import path from 'path';
 import routes from './routes';
 import { port, database } from './config';
 import logger from '@utils/logger';
-import { corsOptions } from '@utils/corsOptions';
+import { corsOptions } from '@middleware/cors-middleware';
 
 function initializeApp(app: Express) {
   /**
